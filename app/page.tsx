@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation"; // <--- Required for redirect
 import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 import FilterBar from "@/components/FilterBar";
@@ -7,7 +8,26 @@ import { useTasks } from "@/hooks/useTasks";
 import { useDebounce } from "@/hooks/useDebounce";
 
 export default function Home() {
+  const router = useRouter();
   const { tasks, addTask, updateTask, deleteTask, toggleComplete } = useTasks();
+
+  // --- AUTH PROTECTION ---
+  const [user, setUser] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const sessionUser = sessionStorage.getItem("nelo_user");
+    if (!sessionUser) {
+      router.push("/login");
+    } else {
+      setUser(sessionUser);
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("nelo_user");
+    router.push("/login");
+  };
 
   // --- FILTER STATE ---
   const [search, setSearch] = useState("");
@@ -38,16 +58,27 @@ export default function Home() {
     });
   }, [tasks, status, priority, debouncedSearch]);
 
+  // Prevent flashing content before redirect check completes
+  if (!user) return null;
+
   return (
     <main className="main-container">
-      <header className="mb-8 text-center">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Nelo Tasks</h1>
-        <p className="text-slate-500 mt-1">Manage your daily priorities</p>
+      {/* HEADER WITH LOGOUT */}
+      <header className="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="text-center md:text-left">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Nelo Tasks</h1>
+          <p className="text-slate-500 mt-1">Welcome, {user}</p>
+        </div>
+        <button 
+          onClick={handleLogout} 
+          className="text-sm font-medium text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors border border-transparent hover:border-red-100"
+        >
+          Sign Out
+        </button>
       </header>
 
       <TaskForm onAdd={addTask} />
 
-      {/* NEW: Filter Controls */}
       <FilterBar 
         search={search} onSearchChange={setSearch}
         status={status} onStatusChange={setStatus}
@@ -57,7 +88,6 @@ export default function Home() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-700">Tasks</h2>
-          {/* Shows "Filtered / Total" count */}
           <span className="text-sm bg-slate-200 px-2.5 py-0.5 rounded-full text-slate-600 font-medium">
             {filteredTasks.length} / {tasks.length}
           </span>
