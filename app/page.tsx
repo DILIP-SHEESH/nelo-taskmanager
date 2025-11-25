@@ -1,18 +1,21 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation"; // <--- Required for redirect
+import { useRouter } from "next/navigation";
 import TaskForm from "@/components/TaskForm";
 import TaskItem from "@/components/TaskItem";
 import FilterBar from "@/components/FilterBar";
 import { useTasks } from "@/hooks/useTasks";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useTaskAutomation } from "@/hooks/useTaskAutomation";
 
 export default function Home() {
   const router = useRouter();
   const { tasks, addTask, updateTask, deleteTask, toggleComplete } = useTasks();
 
-  // --- AUTH PROTECTION ---
   const [user, setUser] = useState<string | null>(null);
+
+  // --- ACTIVATE AUTOMATION ---
+  useTaskAutomation(tasks);
 
   useEffect(() => {
     // Check if user is logged in
@@ -57,13 +60,10 @@ export default function Home() {
       return true;
     });
   }, [tasks, status, priority, debouncedSearch]);
-
-  // Prevent flashing content before redirect check completes
   if (!user) return null;
 
   return (
     <main className="main-container">
-      {/* HEADER WITH LOGOUT */}
       <header className="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="text-center md:text-left">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Nelo Tasks</h1>
